@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use codex_core::auth::get_auth_file;
 use codex_core::auth::login_with_api_key;
 use codex_protocol::mcp_protocol::AuthMode;
 use codex_protocol::mcp_protocol::GetAuthStatusParams;
@@ -73,7 +74,7 @@ async fn get_auth_status_no_auth() {
 async fn get_auth_status_with_api_key() {
     let codex_home = TempDir::new().unwrap_or_else(|e| panic!("create tempdir: {e}"));
     create_config_toml(codex_home.path()).expect("write config.toml");
-    login_with_api_key(codex_home.path(), "sk-test-key").expect("seed api key");
+    login_with_api_key(&get_auth_file(codex_home.path()), "sk-test-key").expect("seed api key");
 
     let mut mcp = McpProcess::new(codex_home.path())
         .await
@@ -108,7 +109,7 @@ async fn get_auth_status_with_api_key() {
 async fn get_auth_status_with_api_key_no_include_token() {
     let codex_home = TempDir::new().unwrap_or_else(|e| panic!("create tempdir: {e}"));
     create_config_toml(codex_home.path()).expect("write config.toml");
-    login_with_api_key(codex_home.path(), "sk-test-key").expect("seed api key");
+    login_with_api_key(&get_auth_file(codex_home.path()), "sk-test-key").expect("seed api key");
 
     let mut mcp = McpProcess::new(codex_home.path())
         .await

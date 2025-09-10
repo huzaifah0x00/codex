@@ -14,7 +14,6 @@ use base64::Engine;
 use codex_ansi_escape::ansi_escape_line;
 use codex_common::create_config_summary_entries;
 use codex_common::elapsed::format_duration;
-use codex_core::auth::get_auth_file;
 use codex_core::auth::try_read_auth_json;
 use codex_core::config::Config;
 use codex_core::config_types::ReasoningSummaryFormat;
@@ -906,8 +905,8 @@ pub(crate) fn new_status_output(
     lines.push("".into());
 
     // 👤 Account (only if ChatGPT tokens exist), shown under the first block
-    let auth_file = get_auth_file(&config.codex_home);
-    if let Ok(auth) = try_read_auth_json(&auth_file)
+    let auth_file = &config.auth_file;
+    if let Ok(auth) = try_read_auth_json(auth_file)
         && let Some(tokens) = auth.tokens.clone()
     {
         lines.push(vec![padded_emoji("👤").into(), "Account".bold()].into());

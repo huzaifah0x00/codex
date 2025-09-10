@@ -552,6 +552,16 @@ This is analogous to `model_context_window`, but for the maximum number of outpu
 
 Maximum number of bytes to read from an `AGENTS.md` file to include in the instructions sent with the first turn of a session. Defaults to 32 KiB.
 
+## auth_file
+
+Override the location of the `auth.json` file used for authentication. By
+default this file lives at `$CODEX_HOME/auth.json`, but specifying `auth_file`
+allows per-project credentials.
+
+```toml
+auth_file = "/path/to/auth.json"
+```
+
 ## tui
 
 Options that are specific to the TUI.
@@ -593,6 +603,7 @@ Options that are specific to the TUI.
 | `model_providers.<id>.stream_max_retries` | number | SSE stream retry count (default: 5). |
 | `model_providers.<id>.stream_idle_timeout_ms` | number | SSE idle timeout (ms) (default: 300000). |
 | `project_doc_max_bytes` | number | Max bytes to read from `AGENTS.md`. |
+| `auth_file` | string (path) | Override path to `auth.json`. |
 | `profile` | string | Active profile name. |
 | `profiles.<name>.*` | various | Profile‑scoped overrides of the same keys. |
 | `history.persistence` | `save-all` \| `none` | History file persistence (default: `save-all`). |

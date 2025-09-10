@@ -72,6 +72,7 @@ impl OnboardingScreen {
         let preferred_auth_method = config.preferred_auth_method;
         let cwd = config.cwd.clone();
         let codex_home = config.codex_home.clone();
+        let auth_file = config.auth_file.clone();
         let mut steps: Vec<Step> = vec![Step::Welcome(WelcomeWidget {
             is_logged_in: !matches!(login_status, LoginStatus::NotAuthenticated),
         })];
@@ -82,6 +83,7 @@ impl OnboardingScreen {
                 error: None,
                 sign_in_state: Arc::new(RwLock::new(SignInState::PickMode)),
                 codex_home: codex_home.clone(),
+                auth_file,
                 login_status,
                 auth_manager,
                 preferred_auth_method,

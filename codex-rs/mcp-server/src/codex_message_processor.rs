@@ -187,14 +187,13 @@ impl CodexMessageProcessor {
     async fn login_chatgpt(&mut self, request_id: RequestId) {
         let config = self.config.as_ref();
 
-        let opts = LoginServerOptions {
-            open_browser: false,
-            ..LoginServerOptions::new(
-                config.codex_home.clone(),
-                CLIENT_ID.to_string(),
-                config.responses_originator_header.clone(),
-            )
-        };
+        let mut opts = LoginServerOptions::new(
+            config.codex_home.clone(),
+            CLIENT_ID.to_string(),
+            config.responses_originator_header.clone(),
+        );
+        opts.open_browser = false;
+        opts.auth_file = config.auth_file.clone();
 
         enum LoginChatGptReply {
             Response(LoginChatGptResponse),

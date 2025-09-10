@@ -77,7 +77,22 @@ impl CodexAuth {
         preferred_auth_method: AuthMode,
         originator: &str,
     ) -> std::io::Result<Option<CodexAuth>> {
-        load_auth(codex_home, true, preferred_auth_method, originator)
+        load_auth(
+            &get_auth_file(codex_home),
+            true,
+            preferred_auth_method,
+            originator,
+        )
+    }
+
+    /// Loads auth information from a specific auth.json file or
+    /// the OPENAI_API_KEY environment variable.
+    pub fn from_auth_file(
+        auth_file: &Path,
+        preferred_auth_method: AuthMode,
+        originator: &str,
+    ) -> std::io::Result<Option<CodexAuth>> {
+        load_auth(auth_file, true, preferred_auth_method, originator)
     }
 
     pub async fn get_token_data(&self) -> Result<TokenData, std::io::Error> {
@@ -209,9 +224,8 @@ pub fn get_auth_file(codex_home: &Path) -> PathBuf {
 
 /// Delete the auth.json file inside `codex_home` if it exists. Returns `Ok(true)`
 /// if a file was removed, `Ok(false)` if no auth file was present.
-pub fn logout(codex_home: &Path) -> std::io::Result<bool> {
-    let auth_file = get_auth_file(codex_home);
-    match std::fs::remove_file(&auth_file) {
+pub fn logout(auth_file: &Path) -> std::io::Result<bool> {
+    match std::fs::remove_file(auth_file) {
         Ok(_) => Ok(true),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(err) => Err(err),
@@ -219,17 +233,20 @@ pub fn logout(codex_home: &Path) -> std::io::Result<bool> {
 }
 
 /// Writes an `auth.json` that contains only the API key. Intended for CLI use.
-pub fn login_with_api_key(codex_home: &Path, api_key: &str) -> std::io::Result<()> {
+pub fn login_with_api_key(auth_file: &Path, api_key: &str) -> std::io::Result<()> {
     let auth_dot_json = AuthDotJson {
         openai_api_key: Some(api_key.to_string()),
         tokens: None,
         last_refresh: None,
     };
-    write_auth_json(&get_auth_file(codex_home), &auth_dot_json)
+    if let Some(parent) = auth_file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    write_auth_json(auth_file, &auth_dot_json)
 }
 
 fn load_auth(
-    codex_home: &Path,
+    auth_file: &Path,
     include_env_var: bool,
     preferred_auth_method: AuthMode,
     originator: &str,
@@ -237,9 +254,8 @@ fn load_auth(
     // First, check to see if there is a valid auth.json file. If not, we fall
     // back to AuthMode::ApiKey using the OPENAI_API_KEY environment variable
     // (if it is set).
-    let auth_file = get_auth_file(codex_home);
     let client = crate::default_client::create_client(originator);
-    let auth_dot_json = match try_read_auth_json(&auth_file) {
+    let auth_dot_json = match try_read_auth_json(auth_file) {
         Ok(auth) => auth,
         // If auth.json does not exist, try to read the OPENAI_API_KEY from the
         // environment variable.
@@ -291,7 +307,7 @@ fn load_auth(
     Ok(Some(CodexAuth {
         api_key: None,
         mode: AuthMode::ChatGPT,
-        auth_file,
+        auth_file: auth_file.to_path_buf(),
         auth_dot_json: Arc::new(Mutex::new(Some(AuthDotJson {
             openai_api_key: None,
             tokens,
@@ -473,7 +489,7 @@ mod tests {
             auth_dot_json,
             auth_file: _,
             ..
-        } = super::load_auth(codex_home.path(), false, AuthMode::ChatGPT, "codex_cli_rs")
+        } = super::load_auth(&get_auth_file(codex_home.path()), false, AuthMode::ChatGPT, "codex_cli_rs")
             .unwrap()
             .unwrap();
         assert_eq!(None, api_key);
@@ -525,7 +541,7 @@ mod tests {
             auth_dot_json,
             auth_file: _,
             ..
-        } = super::load_auth(codex_home.path(), false, AuthMode::ChatGPT, "codex_cli_rs")
+        } = super::load_auth(&get_auth_file(codex_home.path()), false, AuthMode::ChatGPT, "codex_cli_rs")
             .unwrap()
             .unwrap();
         assert_eq!(None, api_key);
@@ -576,7 +592,7 @@ mod tests {
             auth_dot_json,
             auth_file: _,
             ..
-        } = super::load_auth(codex_home.path(), false, AuthMode::ChatGPT, "codex_cli_rs")
+        } = super::load_auth(&get_auth_file(codex_home.path()), false, AuthMode::ChatGPT, "codex_cli_rs")
             .unwrap()
             .unwrap();
         assert_eq!(Some("sk-test-key".to_string()), api_key);
@@ -596,7 +612,7 @@ mod tests {
         )
         .unwrap();
 
-        let auth = super::load_auth(dir.path(), false, AuthMode::ChatGPT, "codex_cli_rs")
+        let auth = super::load_auth(&get_auth_file(dir.path()), false, AuthMode::ChatGPT, "codex_cli_rs")
             .unwrap()
             .unwrap();
         assert_eq!(auth.mode, AuthMode::ApiKey);
@@ -615,7 +631,7 @@ mod tests {
         };
         write_auth_json(&get_auth_file(dir.path()), &auth_dot_json)?;
         assert!(dir.path().join("auth.json").exists());
-        let removed = logout(dir.path())?;
+        let removed = logout(&get_auth_file(dir.path()))?;
         assert!(removed);
         assert!(!dir.path().join("auth.json").exists());
         Ok(())
@@ -679,7 +695,7 @@ mod tests {
 /// different parts of the program seeing inconsistent auth data mid‑run.
 #[derive(Debug)]
 pub struct AuthManager {
-    codex_home: PathBuf,
+    auth_file: PathBuf,
     originator: String,
     inner: RwLock<CachedAuth>,
 }
@@ -689,12 +705,12 @@ impl AuthManager {
     /// preferred auth method. Errors loading auth are swallowed; `auth()` will
     /// simply return `None` in that case so callers can treat it as an
     /// unauthenticated state.
-    pub fn new(codex_home: PathBuf, preferred_auth_mode: AuthMode, originator: String) -> Self {
-        let auth = CodexAuth::from_codex_home(&codex_home, preferred_auth_mode, &originator)
+    pub fn new(auth_file: PathBuf, preferred_auth_mode: AuthMode, originator: String) -> Self {
+        let auth = CodexAuth::from_auth_file(&auth_file, preferred_auth_mode, &originator)
             .ok()
             .flatten();
         Self {
-            codex_home,
+            auth_file,
             originator,
             inner: RwLock::new(CachedAuth {
                 preferred_auth_mode,
@@ -711,7 +727,7 @@ impl AuthManager {
             auth: Some(auth),
         };
         Arc::new(Self {
-            codex_home: PathBuf::new(),
+            auth_file: PathBuf::new(),
             originator: "codex_cli_rs".to_string(),
             inner: RwLock::new(cached),
         })
@@ -734,7 +750,7 @@ impl AuthManager {
     /// whether the auth value changed.
     pub fn reload(&self) -> bool {
         let preferred = self.preferred_auth_method();
-        let new_auth = CodexAuth::from_codex_home(&self.codex_home, preferred, &self.originator)
+        let new_auth = CodexAuth::from_auth_file(&self.auth_file, preferred, &self.originator)
             .ok()
             .flatten();
         if let Ok(mut guard) = self.inner.write() {
@@ -756,11 +772,11 @@ impl AuthManager {
 
     /// Convenience constructor returning an `Arc` wrapper.
     pub fn shared(
-        codex_home: PathBuf,
+        auth_file: PathBuf,
         preferred_auth_mode: AuthMode,
         originator: String,
     ) -> Arc<Self> {
-        Arc::new(Self::new(codex_home, preferred_auth_mode, originator))
+        Arc::new(Self::new(auth_file, preferred_auth_mode, originator))
     }
 
     /// Attempt to refresh the current auth token (if any). On success, reload
@@ -785,7 +801,7 @@ impl AuthManager {
     /// reloads the in‑memory auth cache so callers immediately observe the
     /// unauthenticated state.
     pub fn logout(&self) -> std::io::Result<bool> {
-        let removed = super::auth::logout(&self.codex_home)?;
+        let removed = super::auth::logout(&self.auth_file)?;
         // Always reload to clear any cached auth (even if file absent).
         self.reload();
         Ok(removed)

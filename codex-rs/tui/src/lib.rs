@@ -313,7 +313,7 @@ async fn run_ratatui_app(
     } = cli;
 
     let auth_manager = AuthManager::shared(
-        config.codex_home.clone(),
+        config.auth_file.clone(),
         config.preferred_auth_method,
         config.responses_originator_header.clone(),
     );
@@ -399,9 +399,9 @@ fn get_login_status(config: &Config) -> LoginStatus {
     if config.model_provider.requires_openai_auth {
         // Reading the OpenAI API key is an async operation because it may need
         // to refresh the token. Block on it.
-        let codex_home = config.codex_home.clone();
-        match CodexAuth::from_codex_home(
-            &codex_home,
+        let auth_file = config.auth_file.clone();
+        match CodexAuth::from_auth_file(
+            &auth_file,
             config.preferred_auth_method,
             &config.responses_originator_header,
         ) {

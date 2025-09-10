@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::time::Duration;
 
+use codex_core::auth::get_auth_file;
 use codex_core::auth::login_with_api_key;
 use codex_protocol::mcp_protocol::CancelLoginChatGptParams;
 use codex_protocol::mcp_protocol::CancelLoginChatGptResponse;
@@ -43,7 +44,7 @@ stream_max_retries = 0
 async fn logout_chatgpt_removes_auth() {
     let codex_home = TempDir::new().unwrap_or_else(|e| panic!("create tempdir: {e}"));
     create_config_toml(codex_home.path()).expect("write config.toml");
-    login_with_api_key(codex_home.path(), "sk-test-key").expect("seed api key");
+    login_with_api_key(&get_auth_file(codex_home.path()), "sk-test-key").expect("seed api key");
     assert!(codex_home.path().join("auth.json").exists());
 
     let mut mcp = McpProcess::new(codex_home.path())

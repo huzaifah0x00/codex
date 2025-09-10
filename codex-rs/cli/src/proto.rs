@@ -38,7 +38,7 @@ pub async fn run_main(opts: ProtoCli) -> anyhow::Result<()> {
     let config = Config::load_with_cli_overrides(overrides_vec, ConfigOverrides::default())?;
     // Use conversation_manager API to start a conversation
     let conversation_manager = ConversationManager::new(AuthManager::shared(
-        config.codex_home.clone(),
+        config.auth_file.clone(),
         config.preferred_auth_method,
         config.responses_originator_header.clone(),
     ));
