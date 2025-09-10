@@ -36,10 +36,12 @@ pub struct ServerOptions {
     pub open_browser: bool,
     pub force_state: Option<String>,
     pub originator: String,
+    pub auth_file: PathBuf,
 }
 
 impl ServerOptions {
     pub fn new(codex_home: PathBuf, client_id: String, originator: String) -> Self {
+        let auth_file = get_auth_file(&codex_home);
         Self {
             codex_home,
             client_id: client_id.to_string(),
@@ -48,6 +50,7 @@ impl ServerOptions {
             open_browser: true,
             force_state: None,
             originator,
+            auth_file,
         }
     }
 }
@@ -243,7 +246,7 @@ async fn process_request(
                         .await
                         .ok();
                     if let Err(err) = persist_tokens_async(
-                        &opts.codex_home,
+                        &opts.auth_file,
                         api_key.clone(),
                         tokens.id_token.clone(),
                         Some(tokens.access_token.clone()),
@@ -452,16 +455,15 @@ async fn exchange_code_for_tokens(
 }
 
 async fn persist_tokens_async(
-    codex_home: &Path,
+    auth_file: &Path,
     api_key: Option<String>,
     id_token: String,
     access_token: Option<String>,
     refresh_token: Option<String>,
 ) -> io::Result<()> {
     // Reuse existing synchronous logic but run it off the async runtime.
-    let codex_home = codex_home.to_path_buf();
+    let auth_file = auth_file.to_path_buf();
     tokio::task::spawn_blocking(move || {
-        let auth_file = get_auth_file(&codex_home);
         if let Some(parent) = auth_file.parent()
             && !parent.exists()
         {

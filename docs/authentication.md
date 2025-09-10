@@ -78,6 +78,19 @@ or try this one-liner:
 ssh user@remote 'mkdir -p ~/.codex && cat > ~/.codex/auth.json' < ~/.codex/auth.json
 ```
 
+### Overriding the auth file location
+
+By default Codex reads credentials from `$CODEX_HOME/auth.json`. This path can
+be overridden in `config.toml`:
+
+```toml
+# ~/.codex/config.toml
+auth_file = "/path/to/custom/auth.json"
+```
+
+Project-specific `config.toml` files can set their own `auth_file` to use
+different credentials per workspace.
+
 ### Connecting through VPS or remote
 
 If you run Codex on a remote machine (VPS/server) without a local browser, the login helper starts a server on `localhost:1455` on the remote host. To complete login in your local browser, forward that port to your machine before starting the login flow:

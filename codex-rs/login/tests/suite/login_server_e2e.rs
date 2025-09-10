@@ -8,6 +8,7 @@ use std::time::Duration;
 use base64::Engine;
 use codex_login::ServerOptions;
 use codex_login::run_login_server;
+use codex_login::get_auth_file;
 use tempfile::tempdir;
 
 // See spawn.rs for details
@@ -97,6 +98,7 @@ async fn end_to_end_login_flow_persists_auth_json() {
 
     let opts = ServerOptions {
         codex_home: server_home,
+        auth_file: get_auth_file(&codex_home),
         client_id: codex_login::CLIENT_ID.to_string(),
         issuer,
         port: 0,
@@ -156,6 +158,7 @@ async fn creates_missing_codex_home_dir() {
     let server_home = codex_home.clone();
     let opts = ServerOptions {
         codex_home: server_home,
+        auth_file: get_auth_file(&codex_home),
         client_id: codex_login::CLIENT_ID.to_string(),
         issuer,
         port: 0,
@@ -197,6 +200,7 @@ async fn cancels_previous_login_server_when_port_is_in_use() {
 
     let first_opts = ServerOptions {
         codex_home: first_codex_home,
+        auth_file: get_auth_file(first_tmp.path()),
         client_id: codex_login::CLIENT_ID.to_string(),
         issuer: issuer.clone(),
         port: 0,
@@ -216,6 +220,7 @@ async fn cancels_previous_login_server_when_port_is_in_use() {
 
     let second_opts = ServerOptions {
         codex_home: second_codex_home,
+        auth_file: get_auth_file(second_tmp.path()),
         client_id: codex_login::CLIENT_ID.to_string(),
         issuer,
         port: login_port,

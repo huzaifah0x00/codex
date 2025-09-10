@@ -124,6 +124,10 @@ pub struct Config {
     /// overridden by the `CODEX_HOME` environment variable).
     pub codex_home: PathBuf,
 
+    /// Location of the auth.json file. Defaults to `codex_home/auth.json` but can
+    /// be overridden via `config.toml`.
+    pub auth_file: PathBuf,
+
     /// Settings that govern if and what will be written to `~/.codex/history.jsonl`.
     pub history: History,
 
@@ -429,6 +433,9 @@ pub struct ConfigToml {
 
     /// Maximum number of bytes to include from an AGENTS.md project doc file.
     pub project_doc_max_bytes: Option<usize>,
+
+    /// Path to an alternate auth.json file. Defaults to `~/.codex/auth.json`.
+    pub auth_file: Option<PathBuf>,
 
     /// Profile to use from the `profiles` map.
     pub profile: Option<String>,
@@ -777,6 +784,11 @@ impl Config {
             .responses_originator_header_internal_override
             .unwrap_or(DEFAULT_RESPONSES_ORIGINATOR_HEADER.to_owned());
 
+        let auth_file = cfg
+            .auth_file
+            .clone()
+            .unwrap_or_else(|| codex_home.join("auth.json"));
+
         let config = Self {
             model,
             model_family,
@@ -798,6 +810,7 @@ impl Config {
             model_providers,
             project_doc_max_bytes: cfg.project_doc_max_bytes.unwrap_or(PROJECT_DOC_MAX_BYTES),
             codex_home,
+            auth_file,
             history,
             file_opener: cfg.file_opener.unwrap_or(UriBasedFileOpener::VsCode),
             tui: cfg.tui.unwrap_or_default(),
@@ -1188,6 +1201,7 @@ model_verbosity = "high"
                 model_providers: fixture.model_provider_map.clone(),
                 project_doc_max_bytes: PROJECT_DOC_MAX_BYTES,
                 codex_home: fixture.codex_home(),
+                auth_file: fixture.codex_home().join("auth.json"),
                 history: History::default(),
                 file_opener: UriBasedFileOpener::VsCode,
                 tui: Tui::default(),
@@ -1245,6 +1259,7 @@ model_verbosity = "high"
             model_providers: fixture.model_provider_map.clone(),
             project_doc_max_bytes: PROJECT_DOC_MAX_BYTES,
             codex_home: fixture.codex_home(),
+            auth_file: fixture.codex_home().join("auth.json"),
             history: History::default(),
             file_opener: UriBasedFileOpener::VsCode,
             tui: Tui::default(),
@@ -1317,6 +1332,7 @@ model_verbosity = "high"
             model_providers: fixture.model_provider_map.clone(),
             project_doc_max_bytes: PROJECT_DOC_MAX_BYTES,
             codex_home: fixture.codex_home(),
+            auth_file: fixture.codex_home().join("auth.json"),
             history: History::default(),
             file_opener: UriBasedFileOpener::VsCode,
             tui: Tui::default(),
@@ -1375,6 +1391,7 @@ model_verbosity = "high"
             model_providers: fixture.model_provider_map.clone(),
             project_doc_max_bytes: PROJECT_DOC_MAX_BYTES,
             codex_home: fixture.codex_home(),
+            auth_file: fixture.codex_home().join("auth.json"),
             history: History::default(),
             file_opener: UriBasedFileOpener::VsCode,
             tui: Tui::default(),

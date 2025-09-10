@@ -111,6 +111,7 @@ pub(crate) struct AuthModeWidget {
     pub error: Option<String>,
     pub sign_in_state: Arc<RwLock<SignInState>>,
     pub codex_home: PathBuf,
+    pub auth_file: PathBuf,
     pub login_status: LoginStatus,
     pub preferred_auth_method: AuthMode,
     pub auth_manager: Arc<AuthManager>,
@@ -316,11 +317,12 @@ impl AuthModeWidget {
         }
 
         self.error = None;
-        let opts = ServerOptions::new(
+        let mut opts = ServerOptions::new(
             self.codex_home.clone(),
             CLIENT_ID.to_string(),
             self.config.responses_originator_header.clone(),
         );
+        opts.auth_file = self.auth_file.clone();
         match run_login_server(opts) {
             Ok(child) => {
                 let sign_in_state = self.sign_in_state.clone();
